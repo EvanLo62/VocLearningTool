@@ -36,6 +36,9 @@ public class VocabularyToolFrame extends JFrame {
         // 從 CSV 文件讀取單字
         loadVocabularyFromCSV("vocabulary.csv");
 
+        // 同步已標記單字
+        syncMarkedWords();
+
         // 預設篩選全部單字
         filteredWords.addAll(vocabularyList);
 
@@ -87,7 +90,11 @@ public class VocabularyToolFrame extends JFrame {
             @Override
             public void mouseClicked(java.awt.event.MouseEvent e) {
                 Word currentWord = filteredWords.get(currentIndex);
-                meaningLabel.setText("意思: " + currentWord.getMeaning() + " | 詞性: " + currentWord.getPartOfSpeech());
+                meaningLabel.setText(
+                    "意思: " + currentWord.getMeaning() +
+                    "  |  詞性: " + currentWord.getPartOfSpeech() +
+                    "  |  重要性: " + currentWord.getImportantStars()
+                  );
                 meaningLabel.setForeground(Color.BLACK);
             }
         });
@@ -100,20 +107,20 @@ public class VocabularyToolFrame extends JFrame {
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
         buttonPanel.setBackground(mainPanel.getBackground());
         buttonPanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0)); // 添加內距
-        JButton prevButton = createCustomButton("上一個");
-        JButton nextButton = createCustomButton("下一個");
+        JButton prevButton = createCustomButton("＜");
+        JButton nextButton = createCustomButton("＞");
         JButton markButton = createCustomButton("標記單字");
-        JButton historyButton = createCustomButton("歷史紀錄");
+        JButton quizModeButton = createCustomButton("測驗模式");
 
         prevButton.addActionListener(e -> showPreviousWord());
         nextButton.addActionListener(e -> showNextWord());
         markButton.addActionListener(e -> markCurrentWord());
-        historyButton.addActionListener(e -> showMarkedWords());
+        quizModeButton.addActionListener(e -> enterQuizMode());
 
         buttonPanel.add(prevButton);
         buttonPanel.add(nextButton);
         buttonPanel.add(markButton);
-        buttonPanel.add(historyButton);
+        buttonPanel.add(quizModeButton);
 
         buttonPanel.setPreferredSize(new Dimension(mainPanel.getWidth(), 60));
 
@@ -176,39 +183,47 @@ public class VocabularyToolFrame extends JFrame {
     
 
     private void filterWords() {
-        JTextField startLetterField = new JTextField();
-        JComboBox<String> partOfSpeechComboBox = new JComboBox<>(new String[]{"名詞", "動詞", "形容詞"});
+        // 創建字首範圍下拉框
+        JComboBox<String> startLetterComboBox = new JComboBox<>();
+        startLetterComboBox.addItem("全部");
+        for (char c = 'A'; c <= 'Z'; c++) {
+            startLetterComboBox.addItem(String.valueOf(c));
+        }
+    
+        // 創建詞性下拉框
+        JComboBox<String> partOfSpeechComboBox = new JComboBox<>(new String[]{"全部", "名詞", "動詞", "形容詞"});
+    
+        // 數量輸入框
         JTextField limitField = new JTextField();
     
         Object[] message = {
-            "輸入開頭字母 (A-Z):", startLetterField,
+            "選擇字首範圍:", startLetterComboBox,
             "選擇詞性:", partOfSpeechComboBox,
             "輸入要學習的單字數量:", limitField
         };
     
         int option = JOptionPane.showConfirmDialog(this, message, "篩選條件", JOptionPane.OK_CANCEL_OPTION);
         if (option == JOptionPane.OK_OPTION) {
-            String startLetter = startLetterField.getText().trim().toUpperCase();
-            String partOfSpeech = partOfSpeechComboBox.getSelectedItem().toString();
+            // 獲取使用者選擇的值
+            String selectedLetter = startLetterComboBox.getSelectedItem().toString();
+            String selectedPartOfSpeech = partOfSpeechComboBox.getSelectedItem().toString();
             int limit;
     
-            // 驗證開頭字母是否為 A-Z
-            if (!startLetter.matches("[A-Z]")) {
-                JOptionPane.showMessageDialog(this, "開頭字母必須是 A-Z 的字母！", "錯誤", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-    
+            // 驗證數量輸入是否為數字
             try {
                 limit = Integer.parseInt(limitField.getText().trim());
+                if (limit <= 0) {
+                    throw new NumberFormatException();
+                }
             } catch (NumberFormatException e) {
-                JOptionPane.showMessageDialog(this, "數量必須是數字！", "錯誤", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "數量必須是正整數！", "錯誤", JOptionPane.ERROR_MESSAGE);
                 return;
             }
     
             // 篩選單字
             filteredWords = vocabularyList.stream()
-                    .filter(word -> word.getWord().toUpperCase().startsWith(startLetter))
-                    .filter(word -> word.getPartOfSpeech().equals(partOfSpeech))
+                    .filter(word -> selectedLetter.equals("全部") || word.getWord().toUpperCase().startsWith(selectedLetter))
+                    .filter(word -> selectedPartOfSpeech.equals("全部") || word.getPartOfSpeech().equals(selectedPartOfSpeech))
                     .limit(limit)
                     .collect(Collectors.toList());
     
@@ -221,6 +236,7 @@ public class VocabularyToolFrame extends JFrame {
             }
         }
     }
+    
     
 
     private void showPreviousWord() {
@@ -235,31 +251,160 @@ public class VocabularyToolFrame extends JFrame {
 
     private void markCurrentWord() {
         Word currentWord = filteredWords.get(currentIndex);
-        if (!markedWords.contains(currentWord)) {
-            markedWords.add(currentWord);
-            JOptionPane.showMessageDialog(this, "已標記單字：" + currentWord.getWord());
-        } else {
-            JOptionPane.showMessageDialog(this, "該單字已標記過！");
+    
+        if (currentWord.isMarked()) {
+            JOptionPane.showMessageDialog(this, "該單字已標記過！", "提示", JOptionPane.WARNING_MESSAGE);
+            return;
         }
+    
+        currentWord.setMarked(true);
+        markedWords.add(currentWord);
+        JOptionPane.showMessageDialog(this, "已標記單字：" + currentWord.getWord(), "提示", JOptionPane.INFORMATION_MESSAGE);
     }
 
     private void showMarkedWords() {
+        DefaultListModel<String> listModel = new DefaultListModel<>();
         if (markedWords.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "尚未標記任何單字！");
-            return;
+            listModel.addElement("目前無標記單字");
+        } else {
+            for (Word word : markedWords) {
+                listModel.addElement("單字: " + word.getWord() + " | 字義: " + word.getMeaning() +
+                                     " | 詞性: " + word.getPartOfSpeech() + 
+                                     " | 分類: " + word.getCategory() + 
+                                     " | 重要性: " + word.getImportance());
+            }
         }
+    
+        JList<String> markedWordList = new JList<>(listModel);
+        markedWordList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        JScrollPane scrollPane = new JScrollPane(markedWordList);
+    
+        // 清除選定按鈕
+        JButton deleteButton = new JButton("清除選定單字");
+        deleteButton.addActionListener(e -> {
+            int selectedIndex = markedWordList.getSelectedIndex();
+            if (selectedIndex != -1 && !listModel.getElementAt(selectedIndex).equals("目前無標記單字")) {
+                // 從 `markedWords` 列表中移除對應的單字
+                Word removedWord = markedWords.remove(selectedIndex);
+        
+                // 將 `vocabularyList` 中的該單字標記狀態更新為未標記
+                for (Word word : vocabularyList) {
+                    if (word.getWord().equals(removedWord.getWord())) {
+                        word.setMarked(false);
+                        break;
+                    }
+                }
+        
+                // 從列表模型中移除所選項目
+                listModel.remove(selectedIndex);
+        
+                if (listModel.isEmpty()) {
+                    // 當列表清空後，顯示「目前無標記單字」
+                    listModel.addElement("目前無標記單字");
+                    markedWordList.setEnabled(false); // 禁用列表
+                }
+        
+                JOptionPane.showMessageDialog(this, "已清除所選單字！", "提示", JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(this, "請先選擇要清除的單字！", "提示", JOptionPane.WARNING_MESSAGE);
+            }
+        });
+        
+    
+        // 清空所有按鈕
+        JButton clearAllButton = new JButton("清空所有單字");
+        clearAllButton.addActionListener(e -> {
+            if (markedWords.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "目前無標記單字！", "提示", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+        
+            int confirm = JOptionPane.showConfirmDialog(this, "確定要清空所有標記單字嗎？", "確認", JOptionPane.YES_NO_OPTION);
+            if (confirm == JOptionPane.YES_OPTION) {
+                // 將所有標記的單字設為未標記
+                for (Word markedWord : markedWords) {
+                    for (Word word : vocabularyList) {
+                        if (word.getWord().equals(markedWord.getWord())) {
+                            word.setMarked(false);
+                            break;
+                        }
+                    }
+                }
+        
+                // 清空標記列表
+                markedWords.clear();
+                listModel.clear();
+                listModel.addElement("目前無標記單字");
+                markedWordList.setEnabled(false); // 禁用列表
+                JOptionPane.showMessageDialog(this, "所有標記單字已清空！", "提示", JOptionPane.INFORMATION_MESSAGE);
+            }
+        });
+    
+        // 匯出按鈕
+        JButton exportButton = new JButton("匯出單字");
+        exportButton.addActionListener(e -> {
+            if (markedWords.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "無標記單字可匯出！", "提示", JOptionPane.WARNING_MESSAGE);
+            } else {
+                exportMarkedWords();
+            }
+        });
+    
+        // 將文本框與按鈕放到對話框中
+        JPanel panel = new JPanel(new BorderLayout());
+        JPanel buttonPanel = new JPanel(new FlowLayout());
+        buttonPanel.add(deleteButton);
+        buttonPanel.add(clearAllButton);
+        buttonPanel.add(exportButton);
+    
+        panel.add(scrollPane, BorderLayout.CENTER);
+        panel.add(buttonPanel, BorderLayout.SOUTH);
+    
+        JOptionPane.showMessageDialog(this, panel, "查看標記單字", JOptionPane.INFORMATION_MESSAGE);
+    }    
 
-        StringBuilder markedWordInfo = new StringBuilder("已標記的單字：\n");
-        for (Word word : markedWords) {
-            markedWordInfo.append("單字: ").append(word.getWord())
-                    .append(", 意思: ").append(word.getMeaning())
-                    .append(", 詞性: ").append(word.getPartOfSpeech())
-                    .append(", 分類: ").append(word.getCategory()).append("\n");
+    private void exportMarkedWords() {
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY); // 僅允許選擇檔案
+        fileChooser.setSelectedFile(new java.io.File("marked_words.csv")); // 預設檔案名
+    
+        // 僅允許 CSV 檔案類型
+        fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("CSV Files", "csv"));
+    
+        int option = fileChooser.showSaveDialog(this);
+    
+        if (option == JFileChooser.APPROVE_OPTION) {
+            String filePath = fileChooser.getSelectedFile().getAbsolutePath();
+    
+            // 確保檔案名以 ".csv" 結尾
+            if (!filePath.toLowerCase().endsWith(".csv")) {
+                filePath += ".csv";
+            }
+    
+            try (java.io.FileOutputStream fos = new java.io.FileOutputStream(filePath)) {
+                // 寫入 BOM 標記
+                fos.write(new byte[]{(byte) 0xEF, (byte) 0xBB, (byte) 0xBF});
+    
+                // 構建 CSV 內容
+                StringBuilder csvContent = new StringBuilder("單字,字義,詞性,分類,重要性\n");
+                for (Word word : markedWords) {
+                    csvContent.append(word.getWord()).append(",")
+                              .append(word.getMeaning()).append(",")
+                              .append(word.getPartOfSpeech()).append(",")
+                              .append(word.getCategory()).append(",")
+                              .append(word.getImportance()).append("\n");
+                }
+    
+                // 寫入 CSV 內容
+                fos.write(csvContent.toString().getBytes(StandardCharsets.UTF_8));
+                JOptionPane.showMessageDialog(this, "匯出成功！\n檔案路徑：" + filePath, "成功", JOptionPane.INFORMATION_MESSAGE);
+    
+            } catch (IOException e) {
+                JOptionPane.showMessageDialog(this, "匯出失敗：" + e.getMessage(), "錯誤", JOptionPane.ERROR_MESSAGE);
+            }
         }
-
-        JOptionPane.showMessageDialog(this, markedWordInfo.toString(), "歷史紀錄", JOptionPane.INFORMATION_MESSAGE);
     }
-
+    
     private void updateWordDisplay() {
         if (filteredWords.isEmpty()) {
             wordLabel.setText("無符合條件的單字");
@@ -272,7 +417,7 @@ public class VocabularyToolFrame extends JFrame {
             meaningLabel.setForeground(Color.GRAY);
             progressLabel.setText("當前單字：" + (currentIndex + 1) + "/" + filteredWords.size());
         }
-    }
+    }    
 
     private JButton createCustomButton(String text) {
         JButton button = new JButton(text);
@@ -282,6 +427,26 @@ public class VocabularyToolFrame extends JFrame {
         button.setFocusPainted(false);
         button.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
         return button;
+    }
+
+    public void enterQuizMode() {
+        dispose();
+        QuizModeFrame quizMode = new QuizModeFrame();
+        if (quizMode.isDisplayable()) { // 確保只有需要顯示時才執行
+            SwingUtilities.invokeLater(() -> quizMode.setVisible(true));
+        }
+    }
+    
+    private void syncMarkedWords() {
+        for (Word markedWord : markedWords) {
+            for (Word word : vocabularyList) {
+                if (word.getWord().equals(markedWord.getWord())) {
+                    word.setMarked(true);
+                    // 同步標記狀態
+                    break;
+                }
+            }
+        }
     }
 
     private void loadVocabularyFromCSV(String filePath) {
@@ -296,8 +461,8 @@ public class VocabularyToolFrame extends JFrame {
                     String meaning = parts[1];
                     String partOfSpeech = parts[2];
                     String category = parts[3];
-                    int difficulty = Integer.parseInt(parts[4]); // 確保數字格式正確
-                    vocabularyList.add(new Word(word, meaning, partOfSpeech, category, difficulty, false));
+                    int importance = Integer.parseInt(parts[4]); // 確保數字格式正確
+                    vocabularyList.add(new Word(word, meaning, partOfSpeech, category, importance, false));
                 }
             }
         } catch (IOException e) {

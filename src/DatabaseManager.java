@@ -24,7 +24,7 @@ public class DatabaseManager {
                     "meaning TEXT, " +
                     "part_of_speech TEXT, " +
                     "category TEXT, " +
-                    "difficulty INTEGER)";
+                    "importance INTEGER)";
             stmt.execute(createMarkedWordsTable);
 
             // 初始化進度數據
@@ -38,7 +38,7 @@ public class DatabaseManager {
 
     // public List<Word> loadVocabularyFromDatabase() {
     //     List<Word> vocabularyList = new ArrayList<>();
-    //     String query = "SELECT word, meaning, part_of_speech, category, difficulty FROM marked_words";
+    //     String query = "SELECT word, meaning, part_of_speech, category, importance FROM marked_words";
 
     //     try (Connection conn = DriverManager.getConnection(DB_URL);
     //         Statement stmt = conn.createStatement();
@@ -49,9 +49,9 @@ public class DatabaseManager {
     //             String meaning = rs.getString("meaning");
     //             String partOfSpeech = rs.getString("part_of_speech");
     //             String category = rs.getString("category");
-    //             int difficulty = rs.getInt("difficulty");
+    //             int importance = rs.getInt("importance");
 
-    //             vocabularyList.add(new Word(word, meaning, partOfSpeech, category, difficulty, false));
+    //             vocabularyList.add(new Word(word, meaning, partOfSpeech, category, importance, false));
     //         }
     //     } catch (SQLException e) {
     //         e.printStackTrace();
@@ -81,7 +81,7 @@ public class DatabaseManager {
         List<Word> markedWords = new ArrayList<>();
         try (Connection conn = DriverManager.getConnection(DB_URL);
              Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery("SELECT word, meaning, part_of_speech, category, difficulty FROM marked_words")) {
+             ResultSet rs = stmt.executeQuery("SELECT word, meaning, part_of_speech, category, importance FROM marked_words")) {
 
             while (rs.next()) {
                 markedWords.add(new Word(
@@ -89,7 +89,7 @@ public class DatabaseManager {
                         rs.getString("meaning"),
                         rs.getString("part_of_speech"),
                         rs.getString("category"),
-                        rs.getInt("difficulty"),
+                        rs.getInt("importance"),
                         false
                 ));
             }
@@ -113,10 +113,10 @@ public class DatabaseManager {
             // 插入標記的單字
             for (Word word : markedWords) {
                 String insertMarkedWord = String.format(
-                        "INSERT INTO marked_words (word, meaning, part_of_speech, category, difficulty) " +
+                        "INSERT INTO marked_words (word, meaning, part_of_speech, category, importance) " +
                                 "VALUES ('%s', '%s', '%s', '%s', %d)",
                         word.getWord(), word.getMeaning(), word.getPartOfSpeech(),
-                        word.getCategory(), word.getDifficulty());
+                        word.getCategory(), word.getImportance());
                 stmt.execute(insertMarkedWord);
             }
 

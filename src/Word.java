@@ -3,16 +3,16 @@ public class Word {
     private String meaning;   // 意思
     private String partOfSpeech; // 詞性
     private String category;  // 分類
-    private int difficulty;   // 難度（可選）
-    private boolean learned;  // 是否已學習
+    private int importance;   // 重要性
+    private boolean isMarked = false; // 是否已標註
 
-    public Word(String word, String meaning, String partOfSpeech, String category, int difficulty, boolean learned) {
+    public Word(String word, String meaning, String partOfSpeech, String category, int difficulty, boolean isMarked) {
         this.word = word;
         this.meaning = meaning;
         this.partOfSpeech = partOfSpeech;
         this.category = category;
-        this.difficulty = difficulty;
-        this.learned = learned;
+        this.importance = difficulty;
+        this.isMarked = isMarked;
     }
 
     public String getWord() {
@@ -31,12 +31,16 @@ public class Word {
         return category;
     }
 
-    public int getDifficulty() {
-        return difficulty;
+    public int getImportance() {
+        return importance;
     }
 
-    public boolean getLearned() {
-        return learned;
+    public String getImportantStars() {
+        StringBuilder stars = new StringBuilder();
+        for (int i = 0; i < importance; i++) {
+            stars.append("★");
+        }
+        return stars.toString();
     }
 
     public void setWord(String word) {
@@ -55,11 +59,15 @@ public class Word {
         this.category = category;
     }
 
-    public void setDifficulty(int difficulty) {
-        this.difficulty = difficulty;
+    public void setImportance(int difficulty) {
+        this.importance = difficulty;
     }
 
-    public void setLearned(boolean learned) {
-        this.learned = learned;
+    public boolean isMarked() {
+        return isMarked;
+    }
+
+    public void setMarked(boolean marked) {
+        isMarked = marked;
     }
 }
