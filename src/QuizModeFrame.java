@@ -110,7 +110,7 @@ public class QuizModeFrame extends JFrame {
             letterComboBox.addItem(String.valueOf(c));
         }
     
-        JComboBox<String> posComboBox = new JComboBox<>(new String[]{"全部", "名詞", "動詞", "形容詞"});
+        JComboBox<String> posComboBox = new JComboBox<>(new String[]{"全部", "名詞", "動詞", "形容詞", "副詞"});
         JComboBox<Integer> questionAmountComboBox = new JComboBox<>();
         for (int i = 1; i <= 20; i++) {
             questionAmountComboBox.addItem(i);

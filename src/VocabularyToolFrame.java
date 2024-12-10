@@ -107,20 +107,26 @@ public class VocabularyToolFrame extends JFrame {
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
         buttonPanel.setBackground(mainPanel.getBackground());
         buttonPanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0)); // 添加內距
+        JButton firstButton = createCustomButton("|＜");
         JButton prevButton = createCustomButton("＜");
         JButton nextButton = createCustomButton("＞");
+        JButton lastButton = createCustomButton("＞|");
         JButton markButton = createCustomButton("標記單字");
-        JButton quizModeButton = createCustomButton("測驗模式");
+        // JButton quizModeButton = createCustomButton("測驗模式");
 
+        firstButton.addActionListener(e -> showFirstWord());
         prevButton.addActionListener(e -> showPreviousWord());
         nextButton.addActionListener(e -> showNextWord());
+        lastButton.addActionListener(e -> showLastWord());
         markButton.addActionListener(e -> markCurrentWord());
-        quizModeButton.addActionListener(e -> enterQuizMode());
+        // quizModeButton.addActionListener(e -> enterQuizMode());
 
+        buttonPanel.add(firstButton);
         buttonPanel.add(prevButton);
         buttonPanel.add(nextButton);
+        buttonPanel.add(lastButton);
         buttonPanel.add(markButton);
-        buttonPanel.add(quizModeButton);
+        // buttonPanel.add(quizModeButton);
 
         buttonPanel.setPreferredSize(new Dimension(mainPanel.getWidth(), 60));
 
@@ -139,18 +145,23 @@ public class VocabularyToolFrame extends JFrame {
         JMenuItem viewMarkedWordsItem = new JMenuItem("查看標記單字");
         JMenuItem filterWordsItem = new JMenuItem("篩選單字");
         JMenuItem resetWordsItem = new JMenuItem("還原初始設定");
+        JMenuItem searchWordItem = new JMenuItem("搜尋特定單字");
     
         // 查看標記單字
         viewMarkedWordsItem.addActionListener(e -> showMarkedWords());
     
         // 篩選單字
         filterWordsItem.addActionListener(e -> filterWords());
+
+        // 搜尋特定單字
+        searchWordItem.addActionListener(e -> searchSpecificWord());
     
         // 還原初始設定
         resetWordsItem.addActionListener(e -> resetToInitialSettings());
     
         functionalityMenu.add(viewMarkedWordsItem);
         functionalityMenu.add(filterWordsItem);
+        functionalityMenu.add(searchWordItem);
         functionalityMenu.add(resetWordsItem);
     
         // 檢視選單
@@ -158,13 +169,18 @@ public class VocabularyToolFrame extends JFrame {
         // TODO: 添加檢視相關功能
     
         // 其他功能選單
-        JMenu otherFunctionsMenu = new JMenu("其他功能");
-        // TODO: 添加其他功能相關選項
-    
+        JMenu quizModeMenu = new JMenu("測驗");
+        JMenuItem quizModeItem = new JMenuItem("進入測驗模式");
+        
+        // 進入測驗模式的事件
+        quizModeItem.addActionListener(e -> enterQuizMode());
+        
+        quizModeMenu.add(quizModeItem);
+
         // 添加到菜單列
         menuBar.add(functionalityMenu);
         menuBar.add(viewMenu);
-        menuBar.add(otherFunctionsMenu);
+        menuBar.add(quizModeMenu);
     
         return menuBar;
     }
@@ -191,7 +207,7 @@ public class VocabularyToolFrame extends JFrame {
         }
     
         // 創建詞性下拉框
-        JComboBox<String> partOfSpeechComboBox = new JComboBox<>(new String[]{"全部", "名詞", "動詞", "形容詞"});
+        JComboBox<String> partOfSpeechComboBox = new JComboBox<>(new String[]{"全部", "名詞", "動詞", "形容詞", "副詞"});
     
         // 數量輸入框
         JTextField limitField = new JTextField();
@@ -237,7 +253,10 @@ public class VocabularyToolFrame extends JFrame {
         }
     }
     
-    
+    private void showFirstWord() {
+        currentIndex = 0;
+        updateWordDisplay();
+    }
 
     private void showPreviousWord() {
         currentIndex = (currentIndex - 1 + filteredWords.size()) % filteredWords.size();
@@ -248,6 +267,11 @@ public class VocabularyToolFrame extends JFrame {
         currentIndex = (currentIndex + 1) % filteredWords.size();
         updateWordDisplay();
     }
+
+    private void showLastWord() {
+        currentIndex = filteredWords.size() - 1;
+        updateWordDisplay();
+    }    
 
     private void markCurrentWord() {
         Word currentWord = filteredWords.get(currentIndex);
@@ -404,6 +428,25 @@ public class VocabularyToolFrame extends JFrame {
             }
         }
     }
+    
+    private void searchSpecificWord() {
+        String wordToSearch = JOptionPane.showInputDialog(this, "請輸入要搜尋的單字:", "搜尋特定單字", JOptionPane.PLAIN_MESSAGE);
+        
+        if (wordToSearch != null && !wordToSearch.trim().isEmpty()) {
+            String searchKey = wordToSearch.trim().toLowerCase();
+            filteredWords = vocabularyList.stream()
+                    .filter(word -> word.getWord().equalsIgnoreCase(searchKey))
+                    .collect(Collectors.toList());
+            
+            if (!filteredWords.isEmpty()) {
+                currentIndex = 0; // 重設索引為 0，避免索引超出範圍
+                updateWordDisplay();
+            } else {
+                JOptionPane.showMessageDialog(this, "未找到指定的單字！", "搜尋結果", JOptionPane.INFORMATION_MESSAGE);
+            }
+        }
+    }
+    
     
     private void updateWordDisplay() {
         if (filteredWords.isEmpty()) {
