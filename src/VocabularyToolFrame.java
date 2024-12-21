@@ -51,9 +51,6 @@ public class VocabularyToolFrame extends JFrame {
         // 更新顯示進度與內容
         updateWordDisplay();
 
-        // 啟動時更新標記單字樣式
-        // refreshMarkedWordStyles();
-
         // 儲存進度的關閉事件
         addWindowListener(new java.awt.event.WindowAdapter() {
             @Override
@@ -540,20 +537,6 @@ public class VocabularyToolFrame extends JFrame {
             }
         }
     }
-
-    // private void refreshMarkedWordStyles() {
-    //     if (!filteredWords.isEmpty()) {
-    //         // 檢查當前單字是否被標記並更新樣式
-    //         Word currentWord = filteredWords.get(currentIndex);
-    //         if (markedWords.contains(currentWord)) {
-    //             wordLabel.setForeground(Color.RED); // 標記單字顯示藍色
-    //             wordLabel.setFont(new Font("Microsoft JhengHei", Font.BOLD, 28));
-    //         } else {
-    //             wordLabel.setForeground(Color.BLACK); // 未標記單字顯示黑色
-    //             wordLabel.setFont(new Font("Microsoft JhengHei", Font.BOLD, 28));
-    //         }
-    //     }
-    // }    
 
     private void loadVocabularyFromCSV(String filePath) {
         try (BufferedReader br = new BufferedReader(
