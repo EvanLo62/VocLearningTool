@@ -41,7 +41,7 @@ public class VocabularyToolFrame extends JFrame {
 
         // 預設篩選全部單字
         filteredWords.addAll(vocabularyList);
-
+        
         // 添加菜單
         setJMenuBar(createMenuBar());
 
@@ -50,6 +50,9 @@ public class VocabularyToolFrame extends JFrame {
 
         // 更新顯示進度與內容
         updateWordDisplay();
+
+        // 啟動時更新標記單字樣式
+        // refreshMarkedWordStyles();
 
         // 儲存進度的關閉事件
         addWindowListener(new java.awt.event.WindowAdapter() {
@@ -142,13 +145,10 @@ public class VocabularyToolFrame extends JFrame {
     
         // 功能區選單
         JMenu functionalityMenu = new JMenu("功能區");
-        JMenuItem viewMarkedWordsItem = new JMenuItem("查看標記單字");
         JMenuItem filterWordsItem = new JMenuItem("篩選單字");
-        JMenuItem resetWordsItem = new JMenuItem("還原初始設定");
+        JMenuItem resetWordsItem = new JMenuItem("重置列表");
         JMenuItem searchWordItem = new JMenuItem("搜尋特定單字");
     
-        // 查看標記單字
-        viewMarkedWordsItem.addActionListener(e -> showMarkedWords());
     
         // 篩選單字
         filterWordsItem.addActionListener(e -> filterWords());
@@ -156,18 +156,23 @@ public class VocabularyToolFrame extends JFrame {
         // 搜尋特定單字
         searchWordItem.addActionListener(e -> searchSpecificWord());
     
-        // 還原初始設定
+        // 還原初始設定(重置)
         resetWordsItem.addActionListener(e -> resetToInitialSettings());
     
-        functionalityMenu.add(viewMarkedWordsItem);
         functionalityMenu.add(filterWordsItem);
         functionalityMenu.add(searchWordItem);
         functionalityMenu.add(resetWordsItem);
     
         // 檢視選單
         JMenu viewMenu = new JMenu("檢視");
-        // TODO: 添加檢視相關功能
+        JMenuItem viewMarkedWordsItem = new JMenuItem("查看標記單字");
     
+        // 查看標記單字
+        viewMarkedWordsItem.addActionListener(e -> showMarkedWords());
+        
+        viewMenu.add(viewMarkedWordsItem);
+
+
         // 其他功能選單
         JMenu quizModeMenu = new JMenu("測驗");
         JMenuItem quizModeItem = new JMenuItem("進入測驗模式");
@@ -194,7 +199,7 @@ public class VocabularyToolFrame extends JFrame {
         updateWordDisplay();
         progressLabel.setText("當前單字：1/" + filteredWords.size());
     
-        JOptionPane.showMessageDialog(this, "已還原到初始設定！", "提示", JOptionPane.INFORMATION_MESSAGE);
+        JOptionPane.showMessageDialog(this, "已還原到原始列表！", "提示", JOptionPane.INFORMATION_MESSAGE);
     }
     
 
@@ -283,6 +288,7 @@ public class VocabularyToolFrame extends JFrame {
     
         currentWord.setMarked(true);
         markedWords.add(currentWord);
+        updateWordDisplay(); // 標記後立即更新樣式
         JOptionPane.showMessageDialog(this, "已標記單字：" + currentWord.getWord(), "提示", JOptionPane.INFORMATION_MESSAGE);
     }
 
@@ -318,9 +324,14 @@ public class VocabularyToolFrame extends JFrame {
                         break;
                     }
                 }
-        
+                
                 // 從列表模型中移除所選項目
                 listModel.remove(selectedIndex);
+
+                // 更新當前顯示的單字樣式
+                if (!filteredWords.isEmpty() && filteredWords.get(currentIndex).getWord().equals(removedWord.getWord())) {
+                    updateWordDisplay(); // 即時刷新顯示
+                }
         
                 if (listModel.isEmpty()) {
                     // 當列表清空後，顯示「目前無標記單字」
@@ -360,6 +371,10 @@ public class VocabularyToolFrame extends JFrame {
                 listModel.clear();
                 listModel.addElement("目前無標記單字");
                 markedWordList.setEnabled(false); // 禁用列表
+
+                // 即時刷新當前顯示的單字樣式
+                updateWordDisplay();
+
                 JOptionPane.showMessageDialog(this, "所有標記單字已清空！", "提示", JOptionPane.INFORMATION_MESSAGE);
             }
         });
@@ -431,22 +446,47 @@ public class VocabularyToolFrame extends JFrame {
     
     private void searchSpecificWord() {
         String wordToSearch = JOptionPane.showInputDialog(this, "請輸入要搜尋的單字:", "搜尋特定單字", JOptionPane.PLAIN_MESSAGE);
-        
+    
         if (wordToSearch != null && !wordToSearch.trim().isEmpty()) {
             String searchKey = wordToSearch.trim().toLowerCase();
-            filteredWords = vocabularyList.stream()
-                    .filter(word -> word.getWord().equalsIgnoreCase(searchKey))
-                    .collect(Collectors.toList());
-            
-            if (!filteredWords.isEmpty()) {
-                currentIndex = 0; // 重設索引為 0，避免索引超出範圍
-                updateWordDisplay();
-            } else {
+            boolean foundInFiltered = false;
+            boolean foundInFullList = false;
+    
+            // 先在篩選後的列表中搜尋
+            for (int i = 0; i < filteredWords.size(); i++) {
+                Word word = filteredWords.get(i);
+                if (word.getWord().equalsIgnoreCase(searchKey)) {
+                    currentIndex = i; // 更新索引至篩選範圍內的位置
+                    updateWordDisplay();
+                    progressLabel.setText("當前單字：" + (currentIndex + 1) + "/" + filteredWords.size());
+                    foundInFiltered = true;
+                    break;
+                }
+            }
+    
+            // 若篩選範圍內未找到，則在完整列表中搜尋
+            if (!foundInFiltered) {
+                for (int i = 0; i < vocabularyList.size(); i++) {
+                    Word word = vocabularyList.get(i);
+                    if (word.getWord().equalsIgnoreCase(searchKey)) {
+                        // 恢復完整列表並更新索引至完整列表中的位置
+                        filteredWords = new ArrayList<>(vocabularyList);
+                        currentIndex = i;
+                        updateWordDisplay();
+                        progressLabel.setText("當前單字：" + (currentIndex + 1) + "/" + filteredWords.size());
+                        foundInFullList = true;
+                        JOptionPane.showMessageDialog(this, "此單字不在目前篩選範圍內，已恢復至完整列表！", "提示", JOptionPane.INFORMATION_MESSAGE);
+                        break;
+                    }
+                }
+            }
+    
+            // 若完整列表中也未找到
+            if (!foundInFiltered && !foundInFullList) {
                 JOptionPane.showMessageDialog(this, "未找到指定的單字！", "搜尋結果", JOptionPane.INFORMATION_MESSAGE);
             }
         }
-    }
-    
+    }    
     
     private void updateWordDisplay() {
         if (filteredWords.isEmpty()) {
@@ -458,6 +498,16 @@ public class VocabularyToolFrame extends JFrame {
             wordLabel.setText("單字: " + currentWord.getWord());
             meaningLabel.setText("點擊查看意思");
             meaningLabel.setForeground(Color.GRAY);
+
+            // 判斷單字是否被標記，改變字樣
+            if (currentWord.isMarked()) {
+                wordLabel.setForeground(Color.RED); // 標記單字顯示紅色
+                wordLabel.setFont(new Font("Microsoft JhengHei", Font.BOLD, 28));
+            } else {
+                wordLabel.setForeground(Color.BLACK); // 未標記單字顯示黑色
+                wordLabel.setFont(new Font("Microsoft JhengHei", Font.BOLD, 28));
+            }
+
             progressLabel.setText("當前單字：" + (currentIndex + 1) + "/" + filteredWords.size());
         }
     }    
@@ -484,13 +534,26 @@ public class VocabularyToolFrame extends JFrame {
         for (Word markedWord : markedWords) {
             for (Word word : vocabularyList) {
                 if (word.getWord().equals(markedWord.getWord())) {
-                    word.setMarked(true);
-                    // 同步標記狀態
+                    word.setMarked(true); // 同步標記狀態
                     break;
                 }
             }
         }
     }
+
+    // private void refreshMarkedWordStyles() {
+    //     if (!filteredWords.isEmpty()) {
+    //         // 檢查當前單字是否被標記並更新樣式
+    //         Word currentWord = filteredWords.get(currentIndex);
+    //         if (markedWords.contains(currentWord)) {
+    //             wordLabel.setForeground(Color.RED); // 標記單字顯示藍色
+    //             wordLabel.setFont(new Font("Microsoft JhengHei", Font.BOLD, 28));
+    //         } else {
+    //             wordLabel.setForeground(Color.BLACK); // 未標記單字顯示黑色
+    //             wordLabel.setFont(new Font("Microsoft JhengHei", Font.BOLD, 28));
+    //         }
+    //     }
+    // }    
 
     private void loadVocabularyFromCSV(String filePath) {
         try (BufferedReader br = new BufferedReader(
