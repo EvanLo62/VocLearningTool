@@ -2,8 +2,6 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-// import javax.swing.JOptionPane;
-
 public class DatabaseManager {
     private static final String DB_URL = "jdbc:sqlite:vocabulary.db";
 
@@ -35,33 +33,6 @@ public class DatabaseManager {
             e.printStackTrace();
         }
     }
-
-    // public List<Word> loadVocabularyFromDatabase() {
-    //     List<Word> vocabularyList = new ArrayList<>();
-    //     String query = "SELECT word, meaning, part_of_speech, category, importance FROM marked_words";
-
-    //     try (Connection conn = DriverManager.getConnection(DB_URL);
-    //         Statement stmt = conn.createStatement();
-    //         ResultSet rs = stmt.executeQuery(query)) {
-
-    //         while (rs.next()) {
-    //             String word = rs.getString("word");
-    //             String meaning = rs.getString("meaning");
-    //             String partOfSpeech = rs.getString("part_of_speech");
-    //             String category = rs.getString("category");
-    //             int importance = rs.getInt("importance");
-
-    //             vocabularyList.add(new Word(word, meaning, partOfSpeech, category, importance, false));
-    //         }
-    //     } catch (SQLException e) {
-    //         e.printStackTrace();
-    //         JOptionPane.showMessageDialog(null, "從資料庫載入單字失敗：" + e.getMessage(),
-    //                 "錯誤", JOptionPane.ERROR_MESSAGE);
-    //     }
-
-    //     return vocabularyList;
-    // }
-
 
     public int loadProgress() {
         try (Connection conn = DriverManager.getConnection(DB_URL);

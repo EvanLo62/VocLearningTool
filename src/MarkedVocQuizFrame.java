@@ -1,15 +1,17 @@
+import javax.swing.*;
 import java.awt.*;
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import javax.swing.*;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
-public class QuizModeFrame extends JFrame {
+public class MarkedVocQuizFrame extends JFrame {
     private List<Word> vocabularyList;
+    private List<Word> markedWords;
     private List<Word> quizWords;
     private int currentQuestionIndex;
     private int score;
@@ -18,46 +20,41 @@ public class QuizModeFrame extends JFrame {
     private JRadioButton[] options;
     private ButtonGroup optionsGroup;
     private JButton nextButton, exitButton;
-
-    private JLabel progressLabel; // 顯示題數進度的 Label
-
-    private String startLetter;
-    private String partOfSpeech;
+    private JLabel progressLabel;
     private int questionCount;
 
-    public QuizModeFrame() {
-        setTitle("測驗模式");
+    public MarkedVocQuizFrame(List<Word> markedWords) {
+        this.markedWords = new ArrayList<>(markedWords); // 創建標記單字的複本
+        setTitle("標記單字測驗模式");
         setSize(600, 400);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
-    
-        // 載入單字列表
+        
+        // 載入單字列表(供隨機選項內容使用)
         vocabularyList = new ArrayList<>();
         loadVocabulary("vocabulary.csv");
-        
-        // 測驗範圍設定
+
         if (!setupQuizSettings()) {
             dispose(); // 關閉測驗視窗
             new VocabularyToolFrame().setVisible(true); // 返回主頁面
             return;
         }
-        
-        // 測驗初始化介面
+
         JPanel mainPanel = new JPanel(new BorderLayout());
         JPanel quizPanel = new JPanel();
         quizPanel.setLayout(new BoxLayout(quizPanel, BoxLayout.Y_AXIS));
-    
-        questionLabel = new JLabel("測驗問題將顯示於此", JLabel.CENTER);
+
+        questionLabel = new JLabel("問題將顯示在此", JLabel.CENTER);
         questionLabel.setFont(new Font("Microsoft JhengHei", Font.BOLD, 18));
         questionLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-    
-        progressLabel = new JLabel("1/10", JLabel.RIGHT); // 顯示進度
+
+        progressLabel = new JLabel("1/" + questionCount, JLabel.RIGHT);
         progressLabel.setFont(new Font("Microsoft JhengHei", Font.PLAIN, 14));
-    
+
         JPanel headerPanel = new JPanel(new BorderLayout());
         headerPanel.add(questionLabel, BorderLayout.CENTER);
         headerPanel.add(progressLabel, BorderLayout.EAST);
-    
+
         options = new JRadioButton[4];
         optionsGroup = new ButtonGroup();
         for (int i = 0; i < 4; i++) {
@@ -66,122 +63,89 @@ public class QuizModeFrame extends JFrame {
             optionsGroup.add(options[i]);
             quizPanel.add(options[i]);
         }
-    
+
         nextButton = new JButton("下一題");
         nextButton.setFont(new Font("Microsoft JhengHei", Font.PLAIN, 16));
         nextButton.setAlignmentX(Component.CENTER_ALIGNMENT);
         nextButton.addActionListener(e -> checkAnswerAndProceed());
-    
+
         exitButton = new JButton("退出測驗");
         exitButton.setFont(new Font("Microsoft JhengHei", Font.PLAIN, 16));
         exitButton.setAlignmentX(Component.CENTER_ALIGNMENT);
         exitButton.addActionListener(e -> {
             dispose();
             new VocabularyToolFrame().setVisible(true); // 返回主頁面
+            
         });
-    
+
         JPanel buttonPanel = new JPanel(new FlowLayout());
         buttonPanel.add(nextButton);
         buttonPanel.add(exitButton);
-    
+
         mainPanel.add(headerPanel, BorderLayout.NORTH);
         mainPanel.add(quizPanel, BorderLayout.CENTER);
         mainPanel.add(buttonPanel, BorderLayout.SOUTH);
-    
+
         add(mainPanel);
-    
-        // 初始化測驗
         startQuiz();
     }
-    
 
     private boolean setupQuizSettings() {
-        JDialog settingsDialog = new JDialog(this, "設定測驗範圍", true);
-        settingsDialog.setSize(400, 300);
+        if (markedWords.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "目前無標記單字可用於測驗！", "錯誤", JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
+
+        JDialog settingsDialog = new JDialog(this, "選擇測驗題數", true);
+        settingsDialog.setSize(300, 150);
         settingsDialog.setLayout(new BorderLayout());
         settingsDialog.setLocationRelativeTo(this);
-    
-        JPanel inputPanel = new JPanel();
-        inputPanel.setLayout(new GridLayout(3, 2, 10, 10));
-    
-        JComboBox<String> letterComboBox = new JComboBox<>();
-        letterComboBox.addItem("全部");
-        for (char c = 'A'; c <= 'Z'; c++) {
-            letterComboBox.addItem(String.valueOf(c));
-        }
-    
-        JComboBox<String> posComboBox = new JComboBox<>(new String[]{"全部", "名詞", "動詞", "形容詞", "副詞"});
+
+        JPanel inputPanel = new JPanel(new FlowLayout());
+
         JComboBox<Integer> questionAmountComboBox = new JComboBox<>();
-        for (int i = 1; i <= 20; i++) {
+        for (int i = 1; i <= markedWords.size(); i++) {
             questionAmountComboBox.addItem(i);
         }
-    
-        inputPanel.add(new JLabel("字首範圍 (選擇):"));
-        inputPanel.add(letterComboBox);
-        inputPanel.add(new JLabel("詞性:"));
-        inputPanel.add(posComboBox);
-        inputPanel.add(new JLabel("題數 (1-20):"));
+
+        inputPanel.add(new JLabel("選擇測驗題數 (1-" + markedWords.size() + "):"));
         inputPanel.add(questionAmountComboBox);
-    
-        // 確定與取消按鈕
+
         JPanel buttonPanel = new JPanel(new FlowLayout());
         JButton confirmButton = new JButton("確定");
         JButton cancelButton = new JButton("取消");
         buttonPanel.add(confirmButton);
         buttonPanel.add(cancelButton);
-    
+
         settingsDialog.add(inputPanel, BorderLayout.CENTER);
         settingsDialog.add(buttonPanel, BorderLayout.SOUTH);
-    
-        final boolean[] isConfirmed = {false}; // 用於記錄是否按下確定
-    
+
+        final boolean[] isConfirmed = {false};
+
         confirmButton.addActionListener(e -> {
-            startLetter = letterComboBox.getSelectedItem().toString();
-            partOfSpeech = posComboBox.getSelectedItem().toString();
             questionCount = (Integer) questionAmountComboBox.getSelectedItem();
-    
-            isConfirmed[0] = true; // 確定設定完成
+            isConfirmed[0] = true;
             settingsDialog.dispose();
         });
-    
+
         cancelButton.addActionListener(e -> {
-            isConfirmed[0] = false; // 設定取消
+            questionCount = 0;
             settingsDialog.dispose();
         });
-    
+
         settingsDialog.setVisible(true);
-    
-        return isConfirmed[0]; // 根據設定是否被確定返回結果
+
+        return isConfirmed[0];
     }
-    
-    
 
     private void startQuiz() {
-        quizWords = new ArrayList<>();
-        for (Word word : vocabularyList) {
-            if ((startLetter.equals("全部") || word.getWord().toUpperCase().startsWith(startLetter)) &&
-                    (partOfSpeech.equals("全部") || word.getPartOfSpeech().equals(partOfSpeech))) {
-                quizWords.add(word);
-            }
-        }
-
-        // 如果範圍是「全部」，打亂 quizWords 列表
-        java.util.Collections.shuffle(quizWords);
-
-        if (quizWords.size() > questionCount) {
-            quizWords = quizWords.subList(0, questionCount);
-        }
+        quizWords = new ArrayList<>(markedWords);
+        Collections.shuffle(quizWords);
+        quizWords = quizWords.subList(0, questionCount);
 
         currentQuestionIndex = 0;
         score = 0;
-
-        if (quizWords.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "沒有符合條件的單字可測驗！", "錯誤", JOptionPane.ERROR_MESSAGE);
-            new VocabularyToolFrame().setVisible(true);
-            dispose();
-        } else {
-            nextQuestion();
-        }
+        nextQuestion();
     }
 
     private void nextQuestion() {
@@ -205,7 +169,7 @@ public class QuizModeFrame extends JFrame {
             }
         }
 
-        java.util.Collections.shuffle(optionsList);
+        Collections.shuffle(optionsList);
 
         for (int i = 0; i < 4; i++) {
             options[i].setText(optionsList.get(i));
@@ -213,8 +177,6 @@ public class QuizModeFrame extends JFrame {
         }
 
         optionsGroup.clearSelection();
-
-        // 更新題數進度
         progressLabel.setText((currentQuestionIndex + 1) + "/" + quizWords.size());
     }
 
@@ -245,8 +207,8 @@ public class QuizModeFrame extends JFrame {
         timer.setRepeats(false);
         timer.start();
     }
-
-    private void loadVocabulary(String filePath) {
+    
+        private void loadVocabulary(String filePath) {
         try (BufferedReader br = new BufferedReader(
                 new InputStreamReader(new FileInputStream(filePath), StandardCharsets.UTF_8))) {
             String line = br.readLine();

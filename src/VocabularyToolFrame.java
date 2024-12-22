@@ -173,11 +173,14 @@ public class VocabularyToolFrame extends JFrame {
         // 其他功能選單
         JMenu quizModeMenu = new JMenu("測驗");
         JMenuItem quizModeItem = new JMenuItem("進入測驗模式");
+        JMenuItem quizModeForMarkedVoc = new JMenuItem("測驗標記單字");
         
         // 進入測驗模式的事件
         quizModeItem.addActionListener(e -> enterQuizMode());
-        
+        quizModeForMarkedVoc.addActionListener(e -> enterMarkedVocQuizMode());
+
         quizModeMenu.add(quizModeItem);
+        quizModeMenu.add(quizModeForMarkedVoc);
 
         // 添加到菜單列
         menuBar.add(functionalityMenu);
@@ -526,6 +529,17 @@ public class VocabularyToolFrame extends JFrame {
             SwingUtilities.invokeLater(() -> quizMode.setVisible(true));
         }
     }
+
+    // 進入測驗標記單字模式
+    public void enterMarkedVocQuizMode() {
+        dbManager.saveProgress(currentIndex, markedWords);
+        dispose();
+        
+        MarkedVocQuizFrame quizMode = new MarkedVocQuizFrame(markedWords);
+        if (quizMode.isDisplayable()) {
+            SwingUtilities.invokeLater(() -> quizMode.setVisible(true));
+        }
+    }
     
     private void syncMarkedWords() {
         for (Word markedWord : markedWords) {
@@ -536,6 +550,11 @@ public class VocabularyToolFrame extends JFrame {
                 }
             }
         }
+    }
+
+    public void reloadMarkedWords() {
+        // 確保標記的單字從內存或資料庫中重新同步
+        markedWords = dbManager.loadMarkedWords(); // 從資料庫重新載入
     }
 
     private void loadVocabularyFromCSV(String filePath) {
