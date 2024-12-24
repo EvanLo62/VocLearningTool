@@ -15,6 +15,7 @@ public class VocabularyToolFrame extends JFrame {
     private List<Word> markedWords; // 已標記的單字
     private int currentIndex; // 當前單字索引
 
+    private JComboBox<String> letterComboBox;
     private JLabel wordLabel, meaningLabel; // 單字與意思顯示
     private JLabel progressLabel; // 顯示進度
     private DatabaseManager dbManager;
@@ -63,12 +64,26 @@ public class VocabularyToolFrame extends JFrame {
     private JPanel createMainUI() {
         JPanel mainPanel = new JPanel(new BorderLayout());
         mainPanel.setBackground(new Color(240, 248, 255));
+        
+        // 上方面板 (包含字首選單和進度條)
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.setBackground(mainPanel.getBackground());
+
+        // 字首單字導引下拉選單
+        letterComboBox = new JComboBox<>();
+        for (char c = 'A'; c <= 'Z'; c++) {
+            letterComboBox.addItem(String.valueOf(c));
+        }
+        letterComboBox.addActionListener(e -> onLetterSelected((String) letterComboBox.getSelectedItem()));
+        headerPanel.add(letterComboBox, BorderLayout.EAST); // 放在右上角
 
         // 左上角進度條
         progressLabel = new JLabel("當前單字：1/" + filteredWords.size());
         progressLabel.setFont(new Font("Microsoft JhengHei", Font.PLAIN, 14));
         progressLabel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10)); // 添加內距
-        mainPanel.add(progressLabel, BorderLayout.NORTH);
+        headerPanel.add(progressLabel, BorderLayout.WEST); // 放在左上角
+
+        mainPanel.add(headerPanel, BorderLayout.NORTH);
 
         // 中間顯示區
         JPanel displayPanel = new JPanel();
@@ -194,7 +209,9 @@ public class VocabularyToolFrame extends JFrame {
         // 還原為初始的單字列表
         filteredWords = new ArrayList<>(vocabularyList);
         currentIndex = 0;
-    
+        
+        letterComboBox.setVisible(true);
+
         // 更新顯示
         updateWordDisplay();
         progressLabel.setText("當前單字：1/" + filteredWords.size());
@@ -202,6 +219,23 @@ public class VocabularyToolFrame extends JFrame {
         JOptionPane.showMessageDialog(this, "已還原到原始列表！", "提示", JOptionPane.INFORMATION_MESSAGE);
     }
     
+    private void onLetterSelected(String selectedLetter) {
+    
+        currentIndex = findFirstWordIndexByLetter(selectedLetter.charAt(0));
+    
+        updateWordDisplay();
+    }
+    
+    private int findFirstWordIndexByLetter(char letter) {
+        for (int i = 0; i < vocabularyList.size(); i++) {
+            if (vocabularyList.get(i).getWord().toUpperCase().startsWith(String.valueOf(letter))) {
+                return i;
+            }
+        }
+    
+        JOptionPane.showMessageDialog(this, "未找到以 " + letter + " 開頭的單字！", "提示", JOptionPane.INFORMATION_MESSAGE);
+        return currentIndex;
+    }
 
     private void filterWords() {
         // 創建字首範圍下拉框
@@ -240,7 +274,7 @@ public class VocabularyToolFrame extends JFrame {
                 JOptionPane.showMessageDialog(this, "數量必須是正整數！", "錯誤", JOptionPane.ERROR_MESSAGE);
                 return;
             }
-    
+            
             // 篩選單字
             filteredWords = vocabularyList.stream()
                     .filter(word -> selectedLetter.equals("全部") || word.getWord().toUpperCase().startsWith(selectedLetter))
@@ -251,6 +285,7 @@ public class VocabularyToolFrame extends JFrame {
             if (filteredWords.isEmpty()) {
                 JOptionPane.showMessageDialog(this, "未找到符合條件的單字！", "提示", JOptionPane.INFORMATION_MESSAGE);
             } else {
+                letterComboBox.setVisible(false);
                 currentIndex = 0;
                 updateWordDisplay();
                 progressLabel.setText("當前單字：1/" + filteredWords.size());
@@ -446,7 +481,7 @@ public class VocabularyToolFrame extends JFrame {
     
     private void searchSpecificWord() {
         String wordToSearch = JOptionPane.showInputDialog(this, "請輸入要搜尋的單字:", "搜尋特定單字", JOptionPane.PLAIN_MESSAGE);
-    
+
         if (wordToSearch != null && !wordToSearch.trim().isEmpty()) {
             String searchKey = wordToSearch.trim().toLowerCase();
             boolean foundInFiltered = false;
@@ -472,6 +507,7 @@ public class VocabularyToolFrame extends JFrame {
                         // 恢復完整列表並更新索引至完整列表中的位置
                         filteredWords = new ArrayList<>(vocabularyList);
                         currentIndex = i;
+                        letterComboBox.setVisible(true);
                         updateWordDisplay();
                         progressLabel.setText("當前單字：" + (currentIndex + 1) + "/" + filteredWords.size());
                         foundInFullList = true;
@@ -522,7 +558,9 @@ public class VocabularyToolFrame extends JFrame {
         return button;
     }
 
+    // 進入測驗模式
     public void enterQuizMode() {
+        dbManager.saveProgress(currentIndex, markedWords);
         dispose();
         QuizModeFrame quizMode = new QuizModeFrame();
         if (quizMode.isDisplayable()) { // 確保只有需要顯示時才執行

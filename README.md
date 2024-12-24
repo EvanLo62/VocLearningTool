@@ -14,7 +14,7 @@
 - Java Runtime Environment (JRE) 8 或更高版本
 - 支援中文顯示的作業系統
 
-## 使用說明
+## 使用說明（待實作）
 1. 確保系統已安裝 Java
 2. 下載並解壓縮程式檔案
 3. 執行 VocabularyGUI.jar
