@@ -36,6 +36,6 @@ word, meaning, part_of_speech, category, importance
 ```
 範例：
 ```
-apple,蘋果,noun,food,1
-travel,旅遊,verb,travel,2
+Abandon, 丟棄, 動詞, 多益, 3
+Access, 通道/接近, 名詞, 托福, 2
 ```
