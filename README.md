@@ -14,12 +14,28 @@
 - Java Runtime Environment (JRE) 8 或更高版本
 - 支援中文顯示的作業系統
 
-## 使用說明（待實作）
+## 使用說明
 1. 確保系統已安裝 Java
 2. 下載並解壓縮程式檔案
-3. 執行 VocabularyGUI.jar
+3. 執行程式：
+   - **Windows**：在命令提示字元切換到程式所在目錄後，輸入：
+     ```bat
+     java -cp "VocLearningTool.jar;lib/*" VocabularyGUI
+     ```
+   - **Linux/macOS**：在終端機切換到程式所在目錄後，輸入：
+     ```bash
+     java -cp 'VocLearningTool.jar:lib/*' VocabularyGUI
+     ```
 4. 在主選單選擇想要學習的單字類別
-5. 選擇瀏覽模式或測驗模式開始學習
+5. 選擇「瀏覽模式」或「測驗模式」開始學習
 
 ## 單字檔案格式
-CSV 檔案格式
+CSV 檔案格式，應包含以下欄位：
+```
+word, meaning, part_of_speech, category, importance
+```
+範例：
+```
+apple,蘋果,noun,food,1
+travel,旅遊,verb,travel,2
+```
